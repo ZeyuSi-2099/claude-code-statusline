@@ -4,10 +4,16 @@
 # 重置时间格式: 当天 "HH:mm"; 跨天 "M/d HH:mm" (24 小时制).
 
 $ErrorActionPreference = 'SilentlyContinue'
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# === stdin JSON ===
-$raw = [Console]::In.ReadToEnd()
+# === stdin JSON: 从原始字节流按 UTF-8 解码 ===
+# 绕过 [Console]::In 启动时绑定的系统 ANSI 代码页 (中文 Windows 默认 CP936),
+# 否则 cwd 等含非 ASCII 字符的字段会被错误解码成乱码.
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $utf8NoBom
+
+$stdin  = [Console]::OpenStandardInput()
+$reader = [System.IO.StreamReader]::new($stdin, $utf8NoBom)
+$raw    = $reader.ReadToEnd()
 if (-not $raw) { return }
 try { $d = $raw | ConvertFrom-Json } catch { return }
 
